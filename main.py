@@ -14,7 +14,7 @@ The observation is a `ndarray` with shape `(3,)` representing the x-y coordinate
     | 1   | y = sin(theta)   | -1.0 | 1.0 |
     | 2   | Angular Velocity | -8.0 | 8.0 |
 '''
-s, _ = env.reset()
+s, _ = env.reset(options={'x_init':1})
 th = np.arccos(s[0])
 
 dt = env.dt
@@ -28,21 +28,21 @@ Bd = sparse.csc_matrix([0, 3*dt/(m*l*l)]).transpose()
 [nx, nu] = Bd.shape
 
 u0 = 0
-umin = np.array([-10])
+umin = np.array([-2])
 umax = -umin
 
 xmin = np.array([-np.pi, -8])
 xmax = -xmin
 
-Q = sparse.diags([1, 0.1])
+Q = sparse.diags([1, 0.01])
 QN = Q
-R = 0.01 * sparse.eye(nu)
+R = 0.001 * sparse.eye(nu)
 
 # x0 = np.zeros(2)
 x0 = np.array([th, s[2]])
 xr = np.array([0, 0])
 
-N = 100
+N = 20
 
 P = sparse.block_diag([sparse.kron(np.eye(N), Q), QN, 
                        sparse.kron(np.eye(N), R)], format='csc')
@@ -76,15 +76,21 @@ for x in range(1000):
     # breakpoint()
     env.render()
     res = prob.solve()
-    if res.info.status != 'solved':
-        raise ValueError('OSQP did not solve the problem!')
+    
+    # if res.info.status != 'solved':
+    #     th = np.arccos(s[0])
+    #     print(th)
+    #     raise ValueError('OSQP did not solve the problem!')
+
     x = res.x[-N*nu:-(N-1)*nu]
+    if x[0]==None:
+        x[0] = 0
     # tau = -env.m * env.g * env.l * s[1]
     s, _, _,  _, _ = env.step(x)
 
     # Update initial state
     th = np.arccos(s[0])
-    print(th)
+    print(th, x[0])
     x0 = np.array([th, s[2]])
     l[:nx] = -x0
     u[:nx] = -x0
